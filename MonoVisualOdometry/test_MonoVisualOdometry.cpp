@@ -10,16 +10,18 @@ int main(int argc, char** argv)
 {
     // class input parameters - feature options
     MonoVisualOdometry::parameters param;
+/* not needed for optical flow method
+
     param.option.feature=4;
     param.option.extract=2;
     param.option.match=1;
     param.option.outlier=1;
+*/
     param.option.solver=1; 
-    
-    // call image from ROS
+        
     Mat frame_old,frame;
-    frame_old=imread("1.png"); // for testing
-    frame=imread("2.png"); // for testing
+    frame_old=imread(argv[1]); // for testing
+    frame=imread(argv[2]); // for testing
     
     if(frame_old.empty() || frame.empty())
     {
@@ -30,6 +32,7 @@ int main(int argc, char** argv)
     MonoVisualOdometry odom(param);               
     odom.nframes=1; // keeps track of overall frames count
 //    odom.nframes=0; // shud be intitialised with =0; for testing =1;
+    odom.opticalFlow=true;
     
 //    while(!flag){	//actual
     for(int i=0 ;i<1 ;i++ ){	// for(;;) testing
