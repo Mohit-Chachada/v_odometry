@@ -312,7 +312,7 @@ for(size_t i = 0; i < N; i++)
 //Fix Dx,Dy,Z as only ROTATION case
 Dx=0;Dy=0;Z=1;
 //initial guess (for phi alone)
-phi=0;
+phi=0.2;
 
 // Initial error
 e=0;
