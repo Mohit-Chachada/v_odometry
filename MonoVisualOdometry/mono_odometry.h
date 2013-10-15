@@ -55,10 +55,11 @@ public:
     int N,iteration;
     float x_net,y_net,heading_net,Z_avg1,Z_avg2,run_time;  // net(absolute) Dx,Dy,phi wrt to start frame
     float x_rel,y_rel,heading_rel;	// relative Dx,Dy,phi wrt to previous frame
+    float x_scaled,y_scaled,error;
     cv::Mat rot;
     pose () { 
     //Default option values
-    N=0;
+    N=0;	
     iteration=0;
     x_net=0;
     y_net=0;
@@ -70,6 +71,9 @@ public:
     y_rel=0;
     heading_rel=0;  
     rot=(0,0,0,0,0,0);
+    x_scaled=0;
+    y_scaled=0;
+    error=0;
     }
   };
   
@@ -116,6 +120,18 @@ public:
   // estimate Rotation using estimateRigidTransform
   void estimateTransformMatrix();
   
+  // calculate rotation and actual translation
+  void rotationActualTranslation();
+
+  // calculate rotation and scaled translation
+  void rotationScaledTranslation();
+/*  
+  // calculate only rotation assuming no translation
+  void rotationNoTranslation();
+  
+  // calculate rotation for small translation
+  void rotationSmallTranslation();
+ */ 
   // get output 
   void output(pose& );
   
@@ -143,6 +159,7 @@ protected:
     float *u_old,*v_old,*u_new,*v_new; 	// old and new pixel coordinates (array)
     float **A,**B; 	//A(Nx2):old [X/Z Y/Z 1] & B(Nx2):new [Xn/Z Yn/Z 1]
     float Dx,Dy,phi,Z,Dx_o,Dy_o,phi_o,Z_o; 	// old and new camera translation and rotation params and depth Z
+    float tx,ty,tx_o,ty_o; 	// old and new Scaled camera translation
     float e; 	// error while solving minimization problem
     float gm; 	// param for controlling gradient descent/newton-raphson method
     std::vector<cv::KeyPoint> keypoints1, keypoints2; 	//keypoints detected in two consecutive images 

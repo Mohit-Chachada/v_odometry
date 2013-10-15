@@ -59,6 +59,9 @@ int main(int argc, char** argv)
     	  cout<<position.y_rel<<"\n";  // relative y-translation
           cout<<position.heading_rel<<"\n";  	  // relative heading change
           cout<<position.rot<<"\n";		//transform estimated using estimateRigidTransform
+          cout<<position.x_scaled<<"\n";		// scaled x-translation
+          cout<<position.y_scaled<<"\n";		// scaled y-translation
+          cout<<position.error<<"\n";
     	}
 	
 	//copy the frame to frame_old

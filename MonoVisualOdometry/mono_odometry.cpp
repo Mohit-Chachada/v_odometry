@@ -240,7 +240,6 @@ void MonoVisualOdometry::calcNormCoordinates() {
      }
 }
 
-// estimate Rotation using estimateRigidTransform
 void MonoVisualOdometry::estimateTransformMatrix() {
      std::vector<Point2f> src;
      std::vector<Point2f> dst;
@@ -265,7 +264,52 @@ void MonoVisualOdometry::estimateTransformMatrix() {
      rot=cv::estimateRigidTransform(src,dst,false);
 }
 
-void MonoVisualOdometry::calcPoseVector() {
+void MonoVisualOdometry::rotationScaledTranslation() {
+    // Finding least square error using Gradient-Descent or Newton-Raphson Method 
+    // x_vect={tx(=Dx/Z),ty(=Dy/Z),phi} and x(n+1)=x(n)-grad(f(x(n)))
+    // f(x)=sum{i=1 to N}[(tx-(A[i][0]*cos(phi)-A[i][1]*sin(phi)-B[i][0]))^2] + sum{i=1 to N}[(ty-(A[i][0]*sin(phi)+A[i][1]*cos(phi)-B[i][1]))^2]
+    // grad(f(x))={df/dtx,df/dty,df/dphi}
+    
+    //initial guess
+    tx=0.001;ty=0.001;phi=0.01;
+
+    // Initial error
+    e=0;
+    for(size_t i = 0; i < N; i++){
+        e =e+(tx-(A[i][0]*cos(phi)-A[i][1]*sin(phi)-B[i][0]))*(tx-(A[i][0]*cos(phi)-A[i][1]*sin(phi)-B[i][0]))+(ty-(A[i][0]*sin(phi)+A[i][1]*cos(phi)-B[i][1]))*(ty-(A[i][0]*sin(phi)+A[i][1]*cos(phi)-B[i][1]));
+    }
+
+    // Iterate x_vect={tx,ty,phi} until error<0.01
+    count=0; 	//no of iterations for error to converge
+    float e_old=0;
+    
+    while(e>=0.01&&e_old!=e){
+	count++;
+	e_old=e;
+        //Old x_vect={tx,ty,phi}
+        tx_o=tx;ty_o=ty;phi_o=phi;
+        switch (solver)
+        {
+         case 1: gm=0.005; // Gradient-Descent
+         break;
+         case 2: gm=1/e; // Newton-Raphson
+         break;
+        }
+ 
+        //New x_vect={tx,ty,phi}
+        tx = tx_o - gm*df_dDx(tx_o,ty_o,phi_o,1,A,B,N);
+        ty = ty_o - gm*df_dDy(tx_o,ty_o,phi_o,1,A,B,N);
+        phi = phi_o - gm*df_dphi(tx_o,ty_o,phi_o,1,A,B,N);
+
+	// Find error
+	e=0;
+	for(size_t i = 0; i < N; i++){
+	    e = e + (tx-(A[i][0]*cos(phi)-A[i][1]*sin(phi)-B[i][0]))*(tx-(A[i][0]*cos(phi)-A[i][1]*sin(phi)-B[i][0]))+(ty-(A[i][0]*sin(phi)+A[i][1]*cos(phi)-B[i][1]))*(ty-(A[i][0]*sin(phi)+A[i][1]*cos(phi)-B[i][1]));
+	}
+    }
+}
+
+void MonoVisualOdometry::rotationActualTranslation() {
     // Finding least square error using Gradient-Descent or Newton-Raphson Method 
     // x_vect={Dx,Dy,phi,Z} and x(n+1)=x(n)-grad(f(x(n)))
     // f(x)=sum{i=1 to N}[(Dx-Z(A[i][0]*cos(phi)-A[i][1]*sin(phi)-B[i][0]))^2] + sum{i=1 to N}[(Dy-Z(A[i][0]*sin(phi)+A[i][1]*cos(phi)-B[i][1]))^2]
@@ -307,7 +351,12 @@ void MonoVisualOdometry::calcPoseVector() {
 	    e = e + (Dx-Z*(A[i][0]*cos(phi)-A[i][1]*sin(phi)-B[i][0]))*(Dx-Z*(A[i][0]*cos(phi)-A[i][1]*sin(phi)-B[i][0]))+(Dy-Z*(A[i][0]*sin(phi)+A[i][1]*cos(phi)-B[i][1]))*(Dy-Z*(A[i][0]*sin(phi)+A[i][1]*cos(phi)-B[i][1]));
 	}
     }
-    
+}
+
+
+void MonoVisualOdometry::calcPoseVector() {
+    rotationActualTranslation();
+    rotationScaledTranslation();
 }
 
 void MonoVisualOdometry::updateMotion(){
@@ -390,6 +439,9 @@ void MonoVisualOdometry::output(pose& position) {
     position.y_rel=rel_Dy;
     position.heading_rel=rel_phi;
     position.rot=rot;
+    position.x_scaled=tx;
+    position.y_scaled=ty;
+    position.error=e;
 }
 
 float MonoVisualOdometry::df_dDx(float Dx,float Dy, float phi, float Z, float **A, float **B, int N) {
