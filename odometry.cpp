@@ -380,7 +380,7 @@ while(e>=0.01&&e_old!=e){
  Dx_o=Dx;Dy_o=Dy;phi_o=phi;Z_o=Z;
 switch (solver)
 {
- case 1: gm=0.005; // Gradient Descent
+ case 1: gm=0.001; // Gradient Descent
  break;
  case 2: gm=1/e; // Newton-Raphson
  break;

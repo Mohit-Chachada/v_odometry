@@ -172,6 +172,7 @@ protected:
     float uo; // principal point (u-coordinate)
     float vo; // principal point (v-coordinate)
     cv::Mat rot; 	// transformation calculated using estimateRigidTransform
+    int *fmatches;	// optical flow matches
 //    vector<uchar> status; // flag to check whether optical flow matching is found
 
 private:

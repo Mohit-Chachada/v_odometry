@@ -184,13 +184,28 @@ void MonoVisualOdometry::calcOpticalFlow(){
     double minEigThreshold=1e-4;
     cv::calcOpticalFlowPyrLK(img1, img2, keypoints1_2f, keypoints2_2f, status, err, winSize, maxLevel, criteria, flags, minEigThreshold);
 
-    // convert Point2f to KeyPoints
+    int nMatches=0;
+        for (int i=0;i<keypoints2_2f.size(); i++)
+       {
+        if(status[i]==1){
+	nMatches++;
+        }
+       }
+
+    fmatches=new int [nMatches];
+    int k=0;       
+
+    // convert Point2fs to KeyPoints
     for (int i=0;i<keypoints2_2f.size(); i++)
        {
+        if(status[i]==1){
         float x= keypoints2_2f[i].x;
         float y= keypoints2_2f[i].y;
         KeyPoint kp(x,y,1.0,-1.0,0.0,0,-1);
         keypoints2.push_back(kp);
+	fmatches[k]=i;
+	k++;
+        }
        }
       
     N=keypoints2.size();  // no of matched feature points
@@ -217,7 +232,7 @@ void MonoVisualOdometry::calcNormCoordinates() {
      {
      	 Point2f point1,point2;
          if(opticalFlow){
-         point1 = keypoints1[i].pt;
+         point1 = keypoints1[fmatches[i]].pt;
          point2 = keypoints2[i].pt;         
          }
          else {
@@ -249,7 +264,7 @@ void MonoVisualOdometry::estimateTransformMatrix() {
      for(size_t i = 0; i < N; i++)
      {
          if(opticalFlow){
-         point_1 = keypoints1[i].pt;
+         point_1 = keypoints1[fmatches[i]].pt;
          point_2 = keypoints2[i].pt;         
          }
          else {
@@ -355,7 +370,7 @@ void MonoVisualOdometry::rotationActualTranslation() {
 
 
 void MonoVisualOdometry::calcPoseVector() {
-    rotationActualTranslation();
+   // rotationActualTranslation();
     rotationScaledTranslation();
 }
 

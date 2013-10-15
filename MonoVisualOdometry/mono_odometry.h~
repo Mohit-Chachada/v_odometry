@@ -59,7 +59,7 @@ public:
     cv::Mat rot;
     pose () { 
     //Default option values
-    N=0;	error=0;
+    N=0;	
     iteration=0;
     x_net=0;
     y_net=0;
@@ -73,6 +73,7 @@ public:
     rot=(0,0,0,0,0,0);
     x_scaled=0;
     y_scaled=0;
+    error=0;
     }
   };
   
