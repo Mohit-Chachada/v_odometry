@@ -33,13 +33,14 @@ public:
  */ 
   
   struct options {  
-    int feature,extract,match,outlier,solver; // options for feature points usage and solving methods
+    int feature,extract,match,outlier,method,solver; // options for feature points usage and solving methods
     options () { 
     //Default option values
     feature=1;
     extract=1;
     match=1;
     outlier=1;
+    method=1;
     solver=1;
     }
   };
@@ -125,6 +126,9 @@ public:
 
   // calculate rotation and scaled translation
   void rotationScaledTranslation();
+  
+  // calculate rotation and scaled translation with regularization term
+  void rotationScaledTranslation_reg();  
 /*  
   // calculate only rotation assuming no translation
   void rotationNoTranslation();
@@ -143,6 +147,9 @@ protected:
     float df_dphi(float Dx,float Dy, float phi, float Z, float **A, float **B, int N);
     float df_dZ(float Dx,float Dy, float phi, float Z, float **A, float **B, int N);        
     
+    // second derivative of error function wrt phi
+    float d2f_d2phi(float Dx,float Dy, float phi, float Z, float **A, float **B, int N);
+    
     //ransacTest for outlier removal
     void ransacTest(const std::vector<cv::DMatch> matches,const std::vector<cv::KeyPoint>&keypoints1,const std::vector<cv::KeyPoint>& keypoints2,std::vector<cv::DMatch>& goodMatches,double distance,double confidence);
 
@@ -155,7 +162,7 @@ protected:
     float run_time;	//time for single run
     int N;	// no of good_matches obtained
     int count; 	//no of iterations for (solver ex gradient descent) convergence
-    int feature,extract,match,outlier,solver; 	// options for feature points usage and solving methods
+    int feature,extract,match,outlier,method,solver; 	// options for feature points usage and solving methods
     float *u_old,*v_old,*u_new,*v_new; 	// old and new pixel coordinates (array)
     float **A,**B; 	//A(Nx2):old [X/Z Y/Z 1] & B(Nx2):new [Xn/Z Yn/Z 1]
     float Dx,Dy,phi,Z,Dx_o,Dy_o,phi_o,Z_o; 	// old and new camera translation and rotation params and depth Z
@@ -173,6 +180,7 @@ protected:
     float vo; // principal point (v-coordinate)
     cv::Mat rot; 	// transformation calculated using estimateRigidTransform
     int *fmatches;	// optical flow matches
+    float lam; 		// regularization term weightage
 //    vector<uchar> status; // flag to check whether optical flow matching is found
 
 private:

@@ -1,4 +1,5 @@
 #include "mono_odometry.h"
+#include <iostream>
 
 using namespace std;
 using namespace cv;
@@ -15,7 +16,8 @@ MonoVisualOdometry::MonoVisualOdometry (parameters param) {
       extract=param.option.extract;
       match=param.option.match;
       outlier=param.option.outlier;
-      solver=param.option.solver;      
+      method=param.option.method;            
+      solver=param.option.solver;
 }
 
 MonoVisualOdometry::~MonoVisualOdometry () {
@@ -297,8 +299,9 @@ void MonoVisualOdometry::rotationScaledTranslation() {
     // Iterate x_vect={tx,ty,phi} until error<0.01
     count=0; 	//no of iterations for error to converge
     float e_old=0;
+    float grad_sum=10;	// sum of squares of gradients
     
-    while(e>=0.01&&e_old!=e){
+    while((e>=0.01)&&(count<100)&&(grad_sum>=0.0001)){
 	count++;
 	e_old=e;
         //Old x_vect={tx,ty,phi}
@@ -316,10 +319,80 @@ void MonoVisualOdometry::rotationScaledTranslation() {
         ty = ty_o - gm*df_dDy(tx_o,ty_o,phi_o,1,A,B,N);
         phi = phi_o - gm*df_dphi(tx_o,ty_o,phi_o,1,A,B,N);
 
+	float dDx=df_dDx(tx_o,ty_o,phi_o,1,A,B,N);
+	float dDy=df_dDy(tx_o,ty_o,phi_o,1,A,B,N);
+	float dphi=df_dphi(tx_o,ty_o,phi_o,1,A,B,N);	
+	grad_sum=dDx*dDx + dDy*dDy + dphi*dphi;
+	
+//cout<<"Dx"<<df_dDx(tx_o,ty_o,phi_o,1,A,B,N)<<"\t";
+//cout<<"Dy"<<df_dDy(tx_o,ty_o,phi_o,1,A,B,N)<<"\t";
+//cout<<"phi"<<df_dphi(tx_o,ty_o,phi_o,1,A,B,N)<<"\t";
+
 	// Find error
 	e=0;
 	for(size_t i = 0; i < N; i++){
 	    e = e + (tx-(A[i][0]*cos(phi)-A[i][1]*sin(phi)-B[i][0]))*(tx-(A[i][0]*cos(phi)-A[i][1]*sin(phi)-B[i][0]))+(ty-(A[i][0]*sin(phi)+A[i][1]*cos(phi)-B[i][1]))*(ty-(A[i][0]*sin(phi)+A[i][1]*cos(phi)-B[i][1]));
+	}
+    }
+}
+
+void MonoVisualOdometry::rotationScaledTranslation_reg() {
+    // Finding least square error using Gradient-Descent or Newton-Raphson Method 
+    // x_vect={tx(=Dx/Z),ty(=Dy/Z),phi} and x(n+1)=x(n)-grad(f(x(n)))
+    // f(x)=sum{i=1 to N}[(tx-(A[i][0]*cos(phi)-A[i][1]*sin(phi)-B[i][0]))^2] + sum{i=1 to N}[(ty-(A[i][0]*sin(phi)+A[i][1]*cos(phi)-B[i][1]))^2] + lam*(df_dphi())*(df_dphi());
+    // grad(f(x))={df/dtx,df/dty,df/dphi}
+    
+    //initial guess
+    tx=0.001;ty=0.001;phi=0.01;	lam=0.005;
+
+    float dDx,dDy,dphi,dphi_new; //gradients
+    dphi=df_dphi(tx,ty,phi,1,A,B,N);    
+    
+    // Initial error
+    e=0;
+    for(size_t i = 0; i < N; i++){
+        e =e+(tx-(A[i][0]*cos(phi)-A[i][1]*sin(phi)-B[i][0]))*(tx-(A[i][0]*cos(phi)-A[i][1]*sin(phi)-B[i][0]))+(ty-(A[i][0]*sin(phi)+A[i][1]*cos(phi)-B[i][1]))*(ty-(A[i][0]*sin(phi)+A[i][1]*cos(phi)-B[i][1])) + lam*(dphi*dphi);
+    }
+
+    // Iterate x_vect={tx,ty,phi} until error<0.01
+    count=0; 	//no of iterations for error to converge
+    float e_old=0;
+    float grad_sum=10;	// sum of squares of gradients
+    
+    while((e>=0.01)&&(count<100)&&(grad_sum>=0.0001)){
+	count++;
+	e_old=e;
+        //Old x_vect={tx,ty,phi}
+        tx_o=tx;ty_o=ty;phi_o=phi;
+        switch (solver)
+        {
+         case 1: gm=0.005; // Gradient-Descent
+         break;
+         case 2: gm=1/e; // Newton-Raphson
+         break;
+        }
+
+	dDx=df_dDx(tx_o,ty_o,phi_o,1,A,B,N);
+	dDy=df_dDy(tx_o,ty_o,phi_o,1,A,B,N);
+	dphi=df_dphi(tx_o,ty_o,phi_o,1,A,B,N);
+	dphi_new=dphi/(1-2*lam*d2f_d2phi(tx_o,ty_o,phi_o,1,A,B,N));	
+		
+	grad_sum=dDx*dDx + dDy*dDy + dphi_new*dphi_new;
+	 
+        //New x_vect={tx,ty,phi}
+        tx = tx_o - gm*dDx;
+        ty = ty_o - gm*dDy;
+        phi = phi_o - gm*dphi_new;
+
+//cout<<"Dx"<<dDx<<"\t";
+//cout<<"Dy"<<dDy<<"\t";
+//cout<<"phi"<<dphi_new<<"\t";
+
+	dphi=df_dphi(tx,ty,phi,1,A,B,N);
+	// Find error
+	e=0;
+	for(size_t i = 0; i < N; i++){
+	    e = e + (tx-(A[i][0]*cos(phi)-A[i][1]*sin(phi)-B[i][0]))*(tx-(A[i][0]*cos(phi)-A[i][1]*sin(phi)-B[i][0]))+(ty-(A[i][0]*sin(phi)+A[i][1]*cos(phi)-B[i][1]))*(ty-(A[i][0]*sin(phi)+A[i][1]*cos(phi)-B[i][1])) + lam*(dphi*dphi);
 	}
     }
 }
@@ -341,8 +414,9 @@ void MonoVisualOdometry::rotationActualTranslation() {
 
     // Iterate x_vect={Dx,Dy,phi,Z} until error<0.01
     count=0; 	//no of iterations for error to converge
+    float grad_sum=10;	// sum of squares of gradients    
     
-    while(e>=0.01){
+    while((e>=0.01)&&(count<100)&&(grad_sum>=0.0001)){
 	count++;
         //Old x_vect={Dx,Dy,phi,Z}
         Dx_o=Dx;Dy_o=Dy;phi_o=phi;Z_o=Z;
@@ -359,6 +433,17 @@ void MonoVisualOdometry::rotationActualTranslation() {
         Dy = Dy_o - gm*df_dDy(Dx_o,Dy_o,phi_o,Z_o,A,B,N);
         phi = phi_o - gm*df_dphi(Dx_o,Dy_o,phi_o,Z_o,A,B,N);
         Z = Z_o - gm*df_dZ(Dx_o,Dy_o,phi_o,Z_o,A,B,N);
+        
+	float dDx=df_dDx(Dx_o,Dy_o,phi_o,Z_o,A,B,N);
+	float dDy=df_dDy(Dx_o,Dy_o,phi_o,Z_o,A,B,N);
+	float dphi=df_dphi(Dx_o,Dy_o,phi_o,Z_o,A,B,N);
+	float dZ=df_dZ(Dx_o,Dy_o,phi_o,Z_o,A,B,N);
+	grad_sum=dDx*dDx + dDy*dDy + dphi*dphi + dZ*dZ;    
+	
+cout<<"Dx"<<dDx<<"\t";
+cout<<"Dy"<<dDy<<"\t";
+cout<<"phi"<<dphi<<"\t";	    
+cout<<"Z"<<dZ<<"\t";	    
 
 	// Find error
 	e=0;
@@ -370,8 +455,16 @@ void MonoVisualOdometry::rotationActualTranslation() {
 
 
 void MonoVisualOdometry::calcPoseVector() {
-   // rotationActualTranslation();
-    rotationScaledTranslation();
+   switch(method){
+   	case 1: rotationActualTranslation();
+   	break;
+   	case 2: rotationScaledTranslation();
+   	break;   	
+   	case 3: rotationScaledTranslation_reg(); 
+  	break;
+   	case 4: estimateTransformMatrix();   
+   	break;   	
+   }
 }
 
 void MonoVisualOdometry::updateMotion(){
@@ -425,9 +518,6 @@ void MonoVisualOdometry::run() {
   
     // update motion history
     updateMotion();
-    
-    // rotation using estimateRigidTransform
-    estimateTransformMatrix();
     
     time=clock()-time;
     run_time=((float)time)/CLOCKS_PER_SEC;   //time for single run
@@ -493,6 +583,15 @@ float MonoVisualOdometry::df_dZ(float Dx,float Dy, float phi, float Z, float **A
     sum=sum + 2*(Dx-Z*(A[i][0]*cos(phi)-A[i][1]*sin(phi)-B[i][0])) * ((-1)*(A[i][0]*cos(phi)-A[i][1]*sin(phi)-B[i][0])) + 2*(Dy-Z*(A[i][0]*sin(phi)+A[i][1]*cos(phi)-B[i][1])) * ((-1)*(A[i][0]*sin(phi)+A[i][1]*cos(phi)-B[i][1]));
   }
   return sum;
+}
+
+float MonoVisualOdometry::d2f_d2phi(float Dx,float Dy, float phi, float Z, float **A, float **B, int N) {
+  float sum=0;
+  for(int i=0;i<N;i++)
+  {
+    sum=sum + 2*((-Z)*(-A[i][0]*sin(phi)-A[i][1]*cos(phi))) * ((-Z)*(-A[i][0]*sin(phi)-A[i][1]*cos(phi))) + 2*(Dx-Z*(A[i][0]*cos(phi)-A[i][1]*sin(phi)-B[i][0])) * ((-Z)*(-A[i][0]*cos(phi)+A[i][1]*sin(phi))) + 2*((-Z)*(A[i][0]*cos(phi)-A[i][1]*sin(phi))) * ((-Z)*(A[i][0]*cos(phi)-A[i][1]*sin(phi))) + 2*(Dy-Z*(A[i][0]*sin(phi)+A[i][1]*cos(phi)-B[i][1])) * ((-Z)*(-A[i][0]*sin(phi)-A[i][1]*cos(phi)));
+  }
+  return sum;	
 }
 
 void MonoVisualOdometry::ransacTest(const std::vector<cv::DMatch> matches,const std::vector<cv::KeyPoint>&keypoints1,const std::vector<cv::KeyPoint>& keypoints2,std::vector<cv::DMatch>& goodMatches,double distance,double confidence)
