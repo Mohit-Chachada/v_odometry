@@ -416,7 +416,7 @@ void MonoVisualOdometry::rotationActualTranslation() {
     count=0; 	//no of iterations for error to converge
     float grad_sum=10;	// sum of squares of gradients    
     
-    while((e>=0.01)&&(count<150)&&(grad_sum>=0.0001)){
+    while((e>=0.01)&&(count<100)&&(grad_sum>=0.0001)){
 	count++;
         //Old x_vect={Dx,Dy,phi,Z}
         Dx_o=Dx;Dy_o=Dy;phi_o=phi;Z_o=Z;

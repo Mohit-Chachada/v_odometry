@@ -440,10 +440,10 @@ void MonoVisualOdometry::rotationActualTranslation() {
 	float dZ=df_dZ(Dx_o,Dy_o,phi_o,Z_o,A,B,N);
 	grad_sum=dDx*dDx + dDy*dDy + dphi*dphi + dZ*dZ;    
 	
-cout<<"Dx"<<dDx<<"\t";
-cout<<"Dy"<<dDy<<"\t";
-cout<<"phi"<<dphi<<"\t";	    
-cout<<"Z"<<dZ<<"\t";	    
+//cout<<"Dx"<<dDx<<"\t";
+//cout<<"Dy"<<dDy<<"\t";
+//cout<<"phi"<<dphi<<"\t";	    
+//cout<<"Z"<<dZ<<"\t";	    
 
 	// Find error
 	e=0;
