@@ -164,7 +164,7 @@ void MonoVisualOdometry::findGoodMatches() {
 }
 
 void MonoVisualOdometry::calcOpticalFlow(){
-    int maxCorners=180;
+    int maxCorners=200;
     GoodFeaturesToTrackDetector detector(maxCorners);
     detector.detect(img1, keypoints1);
     

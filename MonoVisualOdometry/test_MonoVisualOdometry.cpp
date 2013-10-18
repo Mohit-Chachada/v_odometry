@@ -17,7 +17,7 @@ int main(int argc, char** argv)
     param.option.match=1;
     param.option.outlier=1;
 */
-    param.option.method=2;
+    param.option.method=4;
     param.option.solver=1; 
         
     Mat frame_old,frame;
