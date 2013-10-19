@@ -18,6 +18,7 @@ MonoVisualOdometry::MonoVisualOdometry (parameters param) {
       outlier=param.option.outlier;
       method=param.option.method;            
       solver=param.option.solver;
+      mask=imread("mask_e.png",0);
 }
 
 MonoVisualOdometry::~MonoVisualOdometry () {
@@ -167,7 +168,7 @@ void MonoVisualOdometry::calcOpticalFlow(){
     int maxCorners=200;
     std::vector<cv::KeyPoint> _keypoints1;	// all keypoints detected
     GoodFeaturesToTrackDetector detector(maxCorners);
-    detector.detect(img1, _keypoints1);
+    detector.detect(img1, _keypoints1, mask);
     
     // convert KeyPoint to Point2f
     for (int i=0;i<_keypoints1.size(); i++)
@@ -178,7 +179,7 @@ void MonoVisualOdometry::calcOpticalFlow(){
        }
        
     // LK Sparse Optical Flow   
-    vector<uchar> status; 
+    vector<uchar> status;
     vector<float> err;
     Size winSize=Size(21,21);
     int maxLevel=3;
@@ -295,7 +296,7 @@ void MonoVisualOdometry::rotationScaledTranslation() {
     float e_old=0;
     float grad_sum=10;	// sum of squares of gradients
     
-    while((e>=0.01)&&(count<100)&&(grad_sum>=0.0001)){
+    while((e>=0.001)&&(count<100)&&(grad_sum>=0.0001)){
 	count++;
 	e_old=e;
         //Old x_vect={tx,ty,phi}
@@ -337,7 +338,7 @@ void MonoVisualOdometry::rotationScaledTranslation_reg() {
     // grad(f(x))={df/dtx,df/dty,df/dphi}
     
     //initial guess
-    tx=0.001;ty=0.001;phi=0.01;	lam=0.005;
+    tx=0.001;ty=0.001;phi=0.01;lam=0.005;
 
     float dDx,dDy,dphi,dphi_new; //gradients
     dphi=df_dphi(tx,ty,phi,1,A,B,N);    
@@ -353,7 +354,7 @@ void MonoVisualOdometry::rotationScaledTranslation_reg() {
     float e_old=0;
     float grad_sum=10;	// sum of squares of gradients
     
-    while((e>=0.01)&&(count<100)&&(grad_sum>=0.0001)){
+    while((e>=0.0001)&&(count<100)&&(grad_sum>=0.0001)){
 	count++;
 	e_old=e;
         //Old x_vect={tx,ty,phi}
@@ -410,7 +411,7 @@ void MonoVisualOdometry::rotationActualTranslation() {
     count=0; 	//no of iterations for error to converge
     float grad_sum=10;	// sum of squares of gradients    
     
-    while((e>=0.01)&&(count<100)&&(grad_sum>=0.0001)){
+    while((e>=0.001)&&(count<100)&&(grad_sum>=0.0001)){
 	count++;
         //Old x_vect={Dx,Dy,phi,Z}
         Dx_o=Dx;Dy_o=Dy;phi_o=phi;Z_o=Z;
@@ -478,7 +479,14 @@ void MonoVisualOdometry::updateMotion(){
 } 
 
 void MonoVisualOdometry::run() {
-    // get image frames
+    // clear old vectors
+    keypoints1.clear();
+    keypoints2.clear();
+    keypoints1_2f.clear();    
+    keypoints2_2f.clear();    
+    matches.clear();
+    good_matches.clear();
+    fmatches.clear();
 
     // start the timer
     time=clock();    
@@ -521,12 +529,16 @@ void MonoVisualOdometry::run() {
     Mat img_key1;
     drawKeypoints(img1, keypoints1,img_key1);
     imshow("keypoints1", img_key1);
-    waitKey(0);
+    waitKey(10);
     
     namedWindow("keypoints2", 1);
     Mat img_key2;
     drawKeypoints(img2, keypoints2,img_key2);
     imshow("keypoints2", img_key2);
+    waitKey(10);    
+    
+    namedWindow("mask", 1);
+    imshow("mask", mask);
     waitKey(0);    
 
 /*

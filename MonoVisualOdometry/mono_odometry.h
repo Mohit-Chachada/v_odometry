@@ -181,6 +181,7 @@ protected:
     cv::Mat rot; 	// transformation calculated using estimateRigidTransform
     std::vector<int> fmatches;	// optical flow matches
     float lam; 		// regularization term weightage
+    cv::Mat mask;    // mask image
 //    vector<uchar> status; // flag to check whether optical flow matching is found
 
 private:

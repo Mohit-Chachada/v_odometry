@@ -17,11 +17,12 @@ int main(int argc, char** argv)
     param.option.match=1;
     param.option.outlier=1;
 */
-    param.option.method=2;
+    param.option.method=3;
     param.option.solver=1; 
         
     Mat frame_old,frame;
-    frame_old=imread(argv[1]); // for testing
+    VideoCapture inputVideo("+1dperframe.avi");
+  /*  frame_old=imread(argv[1]); // for testing
     frame=imread(argv[2]); // for testing
     
     if(frame_old.empty() || frame.empty())
@@ -29,16 +30,19 @@ int main(int argc, char** argv)
         cout<<"Can't read one of the images\n";
         return -1;
     }
-    
+  */  
     MonoVisualOdometry odom(param);               
-    odom.nframes=1; // keeps track of overall frames count
-//    odom.nframes=0; // shud be intitialised with =0; for testing =1;
+//    odom.nframes=1; // keeps track of overall frames count
+    odom.nframes=0; // shud be intitialised with =0; for testing =1;
     odom.opticalFlow=true; 	//necessary for optical flow
     
-//    while(!flag){	//actual
-    for(int i=0 ;i<1 ;i++ ){	// for(;;) testing
+    while(inputVideo.isOpened()){	//actual
+//    for(int i=0 ;i<1 ;i++ ){	// for(;;) testing
 	// get new frame from ROS
         //cin>>frame;  
+        inputVideo.read(frame);
+        imshow("frame_new", frame);
+        if(waitKey(5) >= 0) break;
         odom.nframes++;
 
         if(odom.nframes>=2) {
@@ -67,6 +71,8 @@ int main(int argc, char** argv)
 	
 	//copy the frame to frame_old
 	frame_old=frame.clone();    	
+        imshow("frames_old", frame_old);    	
+        if(waitKey(5) >= 0) break;	
     }
     
     // ROS Plot x_net, y_net, heading_net wrt time
