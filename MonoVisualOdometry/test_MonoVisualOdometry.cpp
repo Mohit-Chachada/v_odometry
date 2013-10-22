@@ -42,7 +42,7 @@ int main(int argc, char** argv)
         //cin>>frame;  
         inputVideo.read(frame);
         imshow("frame_new", frame);
-        if(waitKey(5) >= 0) break;
+        if(waitKey(1) >= 0) break;
         odom.nframes++;
 
         if(odom.nframes>=2) {
@@ -66,15 +66,14 @@ int main(int argc, char** argv)
           cout<<"rot matrix="<<position.rot<<"\n";		//transform estimated using estimateRigidTransform
           cout<<"x_scaled="<<position.x_scaled<<"\n";		// scaled x-translation
           cout<<"y_scaled="<<position.y_scaled<<"\n";		// scaled y-translation
-          cout<<"converged error="<<position.error<<"\n";
+          cout<<"converged error="<<position.error<<"\n"; // converged error
     	}
-	
 	//copy the frame to frame_old
 	frame_old=frame.clone();    	
         imshow("frames_old", frame_old);    	
-        if(waitKey(5) >= 0) break;	
+        if(waitKey(1) >= 0) break;	
     }
-    
+    inputVideo.release();
     // ROS Plot x_net, y_net, heading_net wrt time
     
     return 0;

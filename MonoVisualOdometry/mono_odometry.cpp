@@ -525,21 +525,23 @@ void MonoVisualOdometry::run() {
     run_time=((float)time)/CLOCKS_PER_SEC;   //time for single run
 
     // drawing the keypoints in two imgs
+    const Scalar& color=Scalar(255,255,0); //BGR
+    int flags=DrawMatchesFlags::DEFAULT;
     namedWindow("keypoints1", 1);
     Mat img_key1;
-    drawKeypoints(img1, keypoints1,img_key1);
+    drawKeypoints(img1, keypoints1,img_key1,color,flags);
     imshow("keypoints1", img_key1);
-    waitKey(10);
+    waitKey(1);
     
     namedWindow("keypoints2", 1);
     Mat img_key2;
-    drawKeypoints(img2, keypoints2,img_key2);
+    drawKeypoints(img2, keypoints2,img_key2,color,flags);
     imshow("keypoints2", img_key2);
-    waitKey(10);    
+    waitKey(1);    
     
     namedWindow("mask", 1);
     imshow("mask", mask);
-    waitKey(0);    
+    waitKey(1);    
 
 /*
     // display the two frames

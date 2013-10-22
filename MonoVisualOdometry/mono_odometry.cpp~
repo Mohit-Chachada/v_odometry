@@ -165,7 +165,7 @@ void MonoVisualOdometry::findGoodMatches() {
 }
 
 void MonoVisualOdometry::calcOpticalFlow(){
-    int maxCorners=200;
+    int maxCorners=300;
     std::vector<cv::KeyPoint> _keypoints1;	// all keypoints detected
     GoodFeaturesToTrackDetector detector(maxCorners);
     detector.detect(img1, _keypoints1, mask);
@@ -296,7 +296,7 @@ void MonoVisualOdometry::rotationScaledTranslation() {
     float e_old=0;
     float grad_sum=10;	// sum of squares of gradients
     
-    while((e>=0.001)&&(count<100)&&(grad_sum>=0.0001)){
+    while((e>=0.0001)&&(count<100)&&(grad_sum>=0.0001)){
 	count++;
 	e_old=e;
         //Old x_vect={tx,ty,phi}
@@ -411,7 +411,7 @@ void MonoVisualOdometry::rotationActualTranslation() {
     count=0; 	//no of iterations for error to converge
     float grad_sum=10;	// sum of squares of gradients    
     
-    while((e>=0.001)&&(count<100)&&(grad_sum>=0.0001)){
+    while((e>=0.0001)&&(count<100)&&(grad_sum>=0.0001)){
 	count++;
         //Old x_vect={Dx,Dy,phi,Z}
         Dx_o=Dx;Dy_o=Dy;phi_o=phi;Z_o=Z;
@@ -525,21 +525,23 @@ void MonoVisualOdometry::run() {
     run_time=((float)time)/CLOCKS_PER_SEC;   //time for single run
 
     // drawing the keypoints in two imgs
+    const Scalar& color=Scalar(255,255,0); //BGR
+    int flags=DrawMatchesFlags::DEFAULT;
     namedWindow("keypoints1", 1);
     Mat img_key1;
-    drawKeypoints(img1, keypoints1,img_key1);
+    drawKeypoints(img1, keypoints1,img_key1,color,flags);
     imshow("keypoints1", img_key1);
-    waitKey(10);
+    waitKey(1);
     
     namedWindow("keypoints2", 1);
     Mat img_key2;
-    drawKeypoints(img2, keypoints2,img_key2);
+    drawKeypoints(img2, keypoints2,img_key2,color,flags);
     imshow("keypoints2", img_key2);
-    waitKey(10);    
+    waitKey(1);    
     
     namedWindow("mask", 1);
     imshow("mask", mask);
-    waitKey(0);    
+    waitKey(1);    
 
 /*
     // display the two frames
