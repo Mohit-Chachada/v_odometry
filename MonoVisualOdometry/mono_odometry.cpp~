@@ -165,7 +165,7 @@ void MonoVisualOdometry::findGoodMatches() {
 }
 
 void MonoVisualOdometry::calcOpticalFlow(){
-    int maxCorners=300;
+    int maxCorners=200;
     std::vector<cv::KeyPoint> _keypoints1;	// all keypoints detected
     GoodFeaturesToTrackDetector detector(maxCorners);
     detector.detect(img1, _keypoints1, mask);
@@ -338,7 +338,7 @@ void MonoVisualOdometry::rotationScaledTranslation_reg() {
     // grad(f(x))={df/dtx,df/dty,df/dphi}
     
     //initial guess
-    tx=0.001;ty=0.001;phi=0.01;lam=0.005;
+    tx=0.001;ty=0.001;phi=0;lam=0.005;
 
     float dDx,dDy,dphi,dphi_new; //gradients
     dphi=df_dphi(tx,ty,phi,1,A,B,N);    
@@ -390,6 +390,7 @@ void MonoVisualOdometry::rotationScaledTranslation_reg() {
 	    e = e + (tx-(A[i][0]*cos(phi)-A[i][1]*sin(phi)-B[i][0]))*(tx-(A[i][0]*cos(phi)-A[i][1]*sin(phi)-B[i][0]))+(ty-(A[i][0]*sin(phi)+A[i][1]*cos(phi)-B[i][1]))*(ty-(A[i][0]*sin(phi)+A[i][1]*cos(phi)-B[i][1])) + lam*(dphi*dphi);
 	}
     }
+    if(phi<0.005) phi=0; // to remove accumulation of small 0 error
 }
 
 void MonoVisualOdometry::rotationActualTranslation() {
