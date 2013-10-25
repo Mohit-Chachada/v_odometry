@@ -170,11 +170,12 @@ void MonoVisualOdometry::calcOpticalFlow(){
     GoodFeaturesToTrackDetector detector(maxCorners);
     detector.detect(img1, _keypoints1, mask);
     
+    float x,y;
     // convert KeyPoint to Point2f
     for (int i=0;i<_keypoints1.size(); i++)
        {
-        float x= _keypoints1[i].pt.x;
-        float y= _keypoints1[i].pt.y;
+        x= _keypoints1[i].pt.x;
+        y= _keypoints1[i].pt.y;
         keypoints1_2f.push_back(cv::Point2f(x,y));
        }
        
@@ -192,14 +193,14 @@ void MonoVisualOdometry::calcOpticalFlow(){
     for (int i=0;i<keypoints2_2f.size(); i++)
        {
         if(status[i]==1){
-        float x1= keypoints1_2f[i].x;
-        float y1= keypoints1_2f[i].y;
-        KeyPoint kp1(x1,y1,1.0,-1.0,0.0,0,-1);
+        x= keypoints1_2f[i].x;
+        y= keypoints1_2f[i].y;
+        KeyPoint kp1(x,y,1.0,-1.0,0.0,0,-1);
         keypoints1.push_back(kp1);
         
-        float x2= keypoints2_2f[i].x;
-        float y2= keypoints2_2f[i].y;
-        KeyPoint kp2(x2,y2,1.0,-1.0,0.0,0,-1);        
+        x= keypoints2_2f[i].x;
+        y= keypoints2_2f[i].y;
+        KeyPoint kp2(x,y,1.0,-1.0,0.0,0,-1);        
         keypoints2.push_back(kp2);  
         fmatches.push_back(i); 
         }
@@ -283,7 +284,7 @@ void MonoVisualOdometry::rotationScaledTranslation() {
     // grad(f(x))={df/dtx,df/dty,df/dphi}
     
     //initial guess
-    tx=0.001;ty=0.001;phi=0.01;
+    tx=0.001;ty=0.001;phi=0;
 
     // Initial error
     e=0;
@@ -318,10 +319,6 @@ void MonoVisualOdometry::rotationScaledTranslation() {
 	float dDy=df_dDy(tx_o,ty_o,phi_o,1,A,B,N);
 	float dphi=df_dphi(tx_o,ty_o,phi_o,1,A,B,N);	
 	grad_sum=dDx*dDx + dDy*dDy + dphi*dphi;
-	
-//cout<<"Dx"<<df_dDx(tx_o,ty_o,phi_o,1,A,B,N)<<"\t";
-//cout<<"Dy"<<df_dDy(tx_o,ty_o,phi_o,1,A,B,N)<<"\t";
-//cout<<"phi"<<df_dphi(tx_o,ty_o,phi_o,1,A,B,N)<<"\t";
 
 	// Find error
 	e=0;
@@ -329,6 +326,11 @@ void MonoVisualOdometry::rotationScaledTranslation() {
 	    e = e + (tx-(A[i][0]*cos(phi)-A[i][1]*sin(phi)-B[i][0]))*(tx-(A[i][0]*cos(phi)-A[i][1]*sin(phi)-B[i][0]))+(ty-(A[i][0]*sin(phi)+A[i][1]*cos(phi)-B[i][1]))*(ty-(A[i][0]*sin(phi)+A[i][1]*cos(phi)-B[i][1]));
 	}
     }
+    if (phi<=0.001) phi=0; // to remove accumulation of small 0 error
+    if (phi>=0.3) phi=0.3; // to remove impractical values  
+    if (phi>=0.3 || N<=10) phi_status=false; 	// min 10 features change phi_status flag
+    else phi_status=true;
+    
 }
 
 void MonoVisualOdometry::rotationScaledTranslation_reg() {
@@ -379,10 +381,6 @@ void MonoVisualOdometry::rotationScaledTranslation_reg() {
         ty = ty_o - gm*dDy;
         phi = phi_o - gm*dphi_new;
 
-//cout<<"Dx"<<dDx<<"\t";
-//cout<<"Dy"<<dDy<<"\t";
-//cout<<"phi"<<dphi_new<<"\t";
-
 	dphi=df_dphi(tx,ty,phi,1,A,B,N);
 	// Find error
 	e=0;
@@ -390,7 +388,10 @@ void MonoVisualOdometry::rotationScaledTranslation_reg() {
 	    e = e + (tx-(A[i][0]*cos(phi)-A[i][1]*sin(phi)-B[i][0]))*(tx-(A[i][0]*cos(phi)-A[i][1]*sin(phi)-B[i][0]))+(ty-(A[i][0]*sin(phi)+A[i][1]*cos(phi)-B[i][1]))*(ty-(A[i][0]*sin(phi)+A[i][1]*cos(phi)-B[i][1])) + lam*(dphi*dphi);
 	}
     }
-    if(phi<0.001) phi=0; // to remove accumulation of small 0 error
+    if (phi<=0.001) phi=0; // to remove accumulation of small 0 error
+    if (phi>=0.3) phi=0.3; // to remove impractical values  
+    if (phi>=0.3 || N<=10) phi_status=false; 	// min 10 features change phi_status flag
+    else phi_status=true;
 }
 
 void MonoVisualOdometry::rotationActualTranslation() {
@@ -400,7 +401,7 @@ void MonoVisualOdometry::rotationActualTranslation() {
     // grad(f(x))={df/dDx,df/dDy,df/dphi,df/dZ}
     
     //initial guess
-    Dx=0.001;Dy=0.001;phi=0.1;Z=1.5; 
+    Dx=0.001;Dy=0.001;phi=0;Z=1.5; 
 
     // Initial error
     e=0;
@@ -435,11 +436,6 @@ void MonoVisualOdometry::rotationActualTranslation() {
 	float dphi=df_dphi(Dx_o,Dy_o,phi_o,Z_o,A,B,N);
 	float dZ=df_dZ(Dx_o,Dy_o,phi_o,Z_o,A,B,N);
 	grad_sum=dDx*dDx + dDy*dDy + dphi*dphi + dZ*dZ;    
-	
-//cout<<"Dx"<<dDx<<"\t";
-//cout<<"Dy"<<dDy<<"\t";
-//cout<<"phi"<<dphi<<"\t";	    
-//cout<<"Z"<<dZ<<"\t";	    
 
 	// Find error
 	e=0;
@@ -447,6 +443,10 @@ void MonoVisualOdometry::rotationActualTranslation() {
 	    e = e + (Dx-Z*(A[i][0]*cos(phi)-A[i][1]*sin(phi)-B[i][0]))*(Dx-Z*(A[i][0]*cos(phi)-A[i][1]*sin(phi)-B[i][0]))+(Dy-Z*(A[i][0]*sin(phi)+A[i][1]*cos(phi)-B[i][1]))*(Dy-Z*(A[i][0]*sin(phi)+A[i][1]*cos(phi)-B[i][1]));
 	}
     }
+    if (phi<=0.001) phi=0; // to remove accumulation of small 0 error
+    if (phi>=0.3) phi=0.3; // to remove impractical values  
+    if (phi>=0.3 || N<=10) phi_status=false; 	// min 10 features change phi_status flag
+    else phi_status=true;   
 }
 
 
@@ -570,6 +570,7 @@ void MonoVisualOdometry::output(pose& position) {
     position.x_scaled=tx;
     position.y_scaled=ty;
     position.error=e;
+    position.head_status=phi_status;
 }
 
 float MonoVisualOdometry::df_dDx(float Dx,float Dy, float phi, float Z, float **A, float **B, int N) {

@@ -26,7 +26,7 @@ int main(int argc, char** argv)
     outputFile<<"writing to file\n";
     
     Mat frame_old,frame;
-    VideoCapture inputVideo(0);
+    VideoCapture inputVideo("+1dperframe.avi");
     
     inputVideo.set(CV_CAP_PROP_FRAME_WIDTH, 320);
     inputVideo.set(CV_CAP_PROP_FRAME_HEIGHT, 240);

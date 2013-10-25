@@ -57,6 +57,7 @@ public:
     float x_net,y_net,heading_net,Z_avg1,Z_avg2,run_time;  // net(absolute) Dx,Dy,phi wrt to start frame
     float x_rel,y_rel,heading_rel;	// relative Dx,Dy,phi wrt to previous frame
     float x_scaled,y_scaled,error;
+    bool head_status;
     cv::Mat rot;
     pose () { 
     //Default option values
@@ -75,6 +76,7 @@ public:
     x_scaled=0;
     y_scaled=0;
     error=0;
+    head_status=true;
     }
   };
   
@@ -182,6 +184,7 @@ protected:
     std::vector<int> fmatches;	// optical flow matches
     float lam; 		// regularization term weightage
     cv::Mat mask;    // mask image
+    bool phi_status;	// flag to check if phi values are reliable or not
 //    vector<uchar> status; // flag to check whether optical flow matching is found
 
 private:
