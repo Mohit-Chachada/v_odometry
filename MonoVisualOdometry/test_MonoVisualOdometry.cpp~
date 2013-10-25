@@ -18,7 +18,7 @@ int main(int argc, char** argv)
     param.option.match=1;
     param.option.outlier=1;
 */
-    param.option.method=3;
+    param.option.method=4;
     param.option.solver=1; 
    
     ofstream outputFile;
@@ -26,7 +26,7 @@ int main(int argc, char** argv)
     outputFile<<"writing to file\n";
     
     Mat frame_old,frame;
-    VideoCapture inputVideo(0);
+    VideoCapture inputVideo("-1dperframe.avi");
     
     inputVideo.set(CV_CAP_PROP_FRAME_WIDTH, 320);
     inputVideo.set(CV_CAP_PROP_FRAME_HEIGHT, 240);
@@ -77,6 +77,7 @@ int main(int argc, char** argv)
           cout<<"x_scaled="<<position.x_scaled<<"\n";		// scaled x-translation
           cout<<"y_scaled="<<position.y_scaled<<"\n";		// scaled y-translation
           cout<<"converged error="<<position.error<<"\n"; // converged error
+          cout<<"reliability flag="<<position.head_status<<"\n";	//reliability check
     	}
 	//copy the frame to frame_old
 	frame_old=frame.clone();    	

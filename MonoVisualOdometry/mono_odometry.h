@@ -90,9 +90,6 @@ public:
   // deconstructor
   ~MonoVisualOdometry ();
   
-  //function to get image from ROS
-  
-  
   // find keypoints
   void findKeypoints();  
   

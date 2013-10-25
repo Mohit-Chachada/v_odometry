@@ -4,6 +4,10 @@
 using namespace std;
 using namespace cv;
 
+#define min_N 10	// min no of feature check for result reliability
+#define min_phi 0.001   // radians
+#define max_phi 0.3     // radians
+
 MonoVisualOdometry::MonoVisualOdometry (parameters param) {
       net_Dx=0;net_Dy=0;net_phi=0;net_Z1=0;net_Z2=0;Zsum=0; //pose initialisation
       // calib parameters
@@ -170,14 +174,19 @@ void MonoVisualOdometry::calcOpticalFlow(){
     GoodFeaturesToTrackDetector detector(maxCorners);
     detector.detect(img1, _keypoints1, mask);
     
-    float x,y;
     // convert KeyPoint to Point2f
     for (int i=0;i<_keypoints1.size(); i++)
        {
-        x= _keypoints1[i].pt.x;
-        y= _keypoints1[i].pt.y;
+        float x= _keypoints1[i].pt.x;
+        float y= _keypoints1[i].pt.y;
         keypoints1_2f.push_back(cv::Point2f(x,y));
        }
+       
+    // subpixel corner refinement for keypoints1_2f
+    Size SPwinSize = Size(3,3);		//search window size=(2*n+1,2*n+1)
+    Size zeroZone = Size(1,1);	// dead_zone size in centre=(2*n+1,2*n+1)
+    TermCriteria SPcriteria=TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 30, 0.01);
+    cornerSubPix(img1, keypoints1_2f, SPwinSize, zeroZone, SPcriteria);
        
     // LK Sparse Optical Flow   
     vector<uchar> status;
@@ -189,20 +198,26 @@ void MonoVisualOdometry::calcOpticalFlow(){
     double minEigThreshold=1e-4;
     cv::calcOpticalFlowPyrLK(img1, img2, keypoints1_2f, keypoints2_2f, status, err, winSize, maxLevel, criteria, flags, minEigThreshold);
 
+    // subpixel corner refinement for keypoints2_2f
+ //   cornerSubPix(img2, keypoints2_2f, SPwinSize, zeroZone, SPcriteria);
+        
+    float dist;
     // convert Point2fs to KeyPoints
     for (int i=0;i<keypoints2_2f.size(); i++)
        {
-        if(status[i]==1){
-        x= keypoints1_2f[i].x;
-        y= keypoints1_2f[i].y;
-        KeyPoint kp1(x,y,1.0,-1.0,0.0,0,-1);
-        keypoints1.push_back(kp1);
+        float x1= keypoints1_2f[i].x;
+        float y1= keypoints1_2f[i].y;       	
+        float x2= keypoints2_2f[i].x;
+        float y2= keypoints2_2f[i].y;
+
+        dist = sqrt( (x1-x2)*(x1-x2) + (y1-y2)*(y1-y2) ); 	// dist betwn obtained matches
+        if(status[i]==1 && dist<=20){			// min dist threshold
+          KeyPoint kp1(x1,y1,1.0,-1.0,0.0,0,-1);
+          keypoints1.push_back(kp1);
         
-        x= keypoints2_2f[i].x;
-        y= keypoints2_2f[i].y;
-        KeyPoint kp2(x,y,1.0,-1.0,0.0,0,-1);        
-        keypoints2.push_back(kp2);  
-        fmatches.push_back(i); 
+          KeyPoint kp2(x2,y2,1.0,-1.0,0.0,0,-1);        
+          keypoints2.push_back(kp2);  
+          fmatches.push_back(i); 
         }
        }
 
@@ -275,6 +290,34 @@ void MonoVisualOdometry::estimateTransformMatrix() {
          dst.push_back(point_2);    
      }
      rot=cv::estimateRigidTransform(src,dst,false);
+     
+     double cost=rot.at<double>(0,0);
+     double sint=rot.at<double>(1,0);
+
+     // remove abs(cost)>1 and abs(sint)>1
+     if (cost>1.0) cost=1.0;
+     if (cost<-1.0) cost=-1.0;     	
+     if (sint>1.0) sint=1.0;
+     if (sint<-1.0) sint=-1.0; 
+     
+     if (sint>0) {    	
+     	phi=( acos(cost) + asin(sint) )/2.0;
+     }
+     else {
+     	phi=( -acos(cost) + asin(sint) )/2.0;
+     }
+     tx=rot.at<double>(0,2);
+     ty=rot.at<double>(1,2);    
+    
+     if (abs(phi)<=min_phi) {
+     	phi=0; 		// to remove accumulation of small 0 error
+     }
+     if (abs(phi)>=max_phi) {	// to remove impractical values
+     	if (phi>0) phi=max_phi; 	
+     	else phi=-max_phi; 	
+     }
+     if (abs(phi)>=max_phi || N<=min_N) phi_status=false; 	// min 10 features change phi_status flag
+     else phi_status=true;      
 }
 
 void MonoVisualOdometry::rotationScaledTranslation() {
@@ -326,11 +369,17 @@ void MonoVisualOdometry::rotationScaledTranslation() {
 	    e = e + (tx-(A[i][0]*cos(phi)-A[i][1]*sin(phi)-B[i][0]))*(tx-(A[i][0]*cos(phi)-A[i][1]*sin(phi)-B[i][0]))+(ty-(A[i][0]*sin(phi)+A[i][1]*cos(phi)-B[i][1]))*(ty-(A[i][0]*sin(phi)+A[i][1]*cos(phi)-B[i][1]));
 	}
     }
-    if (phi<=0.001) phi=0; // to remove accumulation of small 0 error
-    if (phi>=0.3) phi=0.3; // to remove impractical values  
-    if (phi>=0.3 || N<=10) phi_status=false; 	// min 10 features change phi_status flag
+
+    if (abs(phi)<=min_phi) {
+    	phi=0; 		// to remove accumulation of small 0 error
+    }
+    if (abs(phi)>=max_phi) {	// to remove impractical values
+    	if (phi>0) phi=max_phi; 	
+    	else phi=-max_phi; 	
+    }
+    if (abs(phi)>=max_phi || N<=min_N) phi_status=false; 	// min 10 features change phi_status flag
     else phi_status=true;
-    
+        
 }
 
 void MonoVisualOdometry::rotationScaledTranslation_reg() {
@@ -388,9 +437,15 @@ void MonoVisualOdometry::rotationScaledTranslation_reg() {
 	    e = e + (tx-(A[i][0]*cos(phi)-A[i][1]*sin(phi)-B[i][0]))*(tx-(A[i][0]*cos(phi)-A[i][1]*sin(phi)-B[i][0]))+(ty-(A[i][0]*sin(phi)+A[i][1]*cos(phi)-B[i][1]))*(ty-(A[i][0]*sin(phi)+A[i][1]*cos(phi)-B[i][1])) + lam*(dphi*dphi);
 	}
     }
-    if (phi<=0.001) phi=0; // to remove accumulation of small 0 error
-    if (phi>=0.3) phi=0.3; // to remove impractical values  
-    if (phi>=0.3 || N<=10) phi_status=false; 	// min 10 features change phi_status flag
+    
+    if (abs(phi)<=min_phi) {
+    	phi=0; 		// to remove accumulation of small 0 error
+    }
+    if (abs(phi)>=max_phi) {	// to remove impractical values
+    	if (phi>0) phi=max_phi; 	
+    	else phi=-max_phi; 	
+    }
+    if (abs(phi)>=max_phi || N<=min_N) phi_status=false; 	// min 10 features change phi_status flag
     else phi_status=true;
 }
 
@@ -443,10 +498,16 @@ void MonoVisualOdometry::rotationActualTranslation() {
 	    e = e + (Dx-Z*(A[i][0]*cos(phi)-A[i][1]*sin(phi)-B[i][0]))*(Dx-Z*(A[i][0]*cos(phi)-A[i][1]*sin(phi)-B[i][0]))+(Dy-Z*(A[i][0]*sin(phi)+A[i][1]*cos(phi)-B[i][1]))*(Dy-Z*(A[i][0]*sin(phi)+A[i][1]*cos(phi)-B[i][1]));
 	}
     }
-    if (phi<=0.001) phi=0; // to remove accumulation of small 0 error
-    if (phi>=0.3) phi=0.3; // to remove impractical values  
-    if (phi>=0.3 || N<=10) phi_status=false; 	// min 10 features change phi_status flag
-    else phi_status=true;   
+
+    if (abs(phi)<=min_phi) {
+    	phi=0; 		// to remove accumulation of small 0 error
+    }
+    if (abs(phi)>=max_phi) {	// to remove impractical values
+    	if (phi>0) phi=max_phi; 	
+    	else phi=-max_phi; 	
+    }
+    if (abs(phi)>=max_phi || N<=min_N) phi_status=false; 	// min 10 features change phi_status flag
+    else phi_status=true;  
 }
 
 

@@ -18,7 +18,7 @@ int main(int argc, char** argv)
     param.option.match=1;
     param.option.outlier=1;
 */
-    param.option.method=3;
+    param.option.method=4;
     param.option.solver=1; 
    
     ofstream outputFile;
@@ -77,6 +77,7 @@ int main(int argc, char** argv)
           cout<<"x_scaled="<<position.x_scaled<<"\n";		// scaled x-translation
           cout<<"y_scaled="<<position.y_scaled<<"\n";		// scaled y-translation
           cout<<"converged error="<<position.error<<"\n"; // converged error
+          cout<<"reliability flag="<<position.head_status<<"\n";	//reliability check
     	}
 	//copy the frame to frame_old
 	frame_old=frame.clone();    	
