@@ -18,8 +18,14 @@ int main(int argc, char** argv)
     param.option.match=1;
     param.option.outlier=1;
 */
-    param.option.method=4;
-    param.option.solver=1; 
+    param.option.method=3;
+    param.option.solver=1;
+         
+    // camera calibration params
+    param.calib.uo=157.73985;
+    param.calib.vo=134.19819;
+    param.calib.fx=391.54809;
+    param.calib.fy=395.45221;
    
     ofstream outputFile;
     outputFile.open("output.txt");

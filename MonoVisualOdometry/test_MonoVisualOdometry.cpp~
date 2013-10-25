@@ -18,15 +18,21 @@ int main(int argc, char** argv)
     param.option.match=1;
     param.option.outlier=1;
 */
-    param.option.method=4;
-    param.option.solver=1; 
+    param.option.method=3;
+    param.option.solver=1;
+         
+    // camera calibration params
+    param.calib.uo=157.73985;
+    param.calib.vo=134.19819;
+    param.calib.fx=391.54809;
+    param.calib.fy=395.45221;
    
     ofstream outputFile;
     outputFile.open("output.txt");
     outputFile<<"writing to file\n";
     
     Mat frame_old,frame;
-    VideoCapture inputVideo("-1dperframe.avi");
+    VideoCapture inputVideo("0dperframe.avi");
     
     inputVideo.set(CV_CAP_PROP_FRAME_WIDTH, 320);
     inputVideo.set(CV_CAP_PROP_FRAME_HEIGHT, 240);
@@ -42,7 +48,7 @@ int main(int argc, char** argv)
     MonoVisualOdometry odom(param);               
 //    odom.nframes=1; // keeps track of overall frames count
     odom.nframes=0; // shud be intitialised with =0; for testing =1;
-    odom.opticalFlow=true; 	//necessary for optical flow
+    odom.opticalFlow=false; 	//necessary for optical flow
     
     while(inputVideo.isOpened()){	//actual
 //    for(int i=0 ;i<1 ;i++ ){	// for(;;) testing

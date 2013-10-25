@@ -11,10 +11,10 @@ using namespace cv;
 MonoVisualOdometry::MonoVisualOdometry (parameters param) {
       net_Dx=0;net_Dy=0;net_phi=0;net_Z1=0;net_Z2=0;Zsum=0; //pose initialisation
       // calib parameters
-      uo=157.73985;
-      vo=134.19819;
-      fx=391.54809;
-      fy=395.45221;
+      uo=param.calib.uo;
+      vo=param.calib.vo;
+      fx=param.calib.fx;
+      fy=param.calib.fy;
       // getting feature options from user
       feature=param.option.feature;
       extract=param.option.extract;
@@ -26,7 +26,6 @@ MonoVisualOdometry::MonoVisualOdometry (parameters param) {
 }
 
 MonoVisualOdometry::~MonoVisualOdometry () {
-  //delete matcher;
 }
 
 void MonoVisualOdometry::findKeypoints() { 
@@ -118,6 +117,7 @@ void MonoVisualOdometry::findGoodMatches() {
     { 
      case 1:
      {
+     
      double distance=50.; //quite adjustable/variable
      double confidence=0.99; //doesnt affect much when changed
      ransacTest(matches,keypoints1,keypoints2,good_matches,distance,confidence); 
@@ -199,7 +199,7 @@ void MonoVisualOdometry::calcOpticalFlow(){
     cv::calcOpticalFlowPyrLK(img1, img2, keypoints1_2f, keypoints2_2f, status, err, winSize, maxLevel, criteria, flags, minEigThreshold);
 
     // subpixel corner refinement for keypoints2_2f
- //   cornerSubPix(img2, keypoints2_2f, SPwinSize, zeroZone, SPcriteria);
+//    cornerSubPix(img2, keypoints2_2f, SPwinSize, zeroZone, SPcriteria);
         
     float dist;
     // convert Point2fs to KeyPoints
@@ -682,6 +682,7 @@ float MonoVisualOdometry::d2f_d2phi(float Dx,float Dy, float phi, float Z, float
 void MonoVisualOdometry::ransacTest(const std::vector<cv::DMatch> matches,const std::vector<cv::KeyPoint>&keypoints1,const std::vector<cv::KeyPoint>& keypoints2,std::vector<cv::DMatch>& goodMatches,double distance,double confidence)
 {
     goodMatches.clear();
+
     // Convert keypoints into Point2f
     std::vector<cv::Point2f> points1, points2;
     for (std::vector<cv::DMatch>::const_iterator it= matches.begin();it!= matches.end(); ++it)
