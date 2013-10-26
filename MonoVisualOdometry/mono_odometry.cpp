@@ -32,37 +32,39 @@ void MonoVisualOdometry::findKeypoints() {
     switch(feature)
     {
      case 1: //FAST
-     {int threshold=130;
+     {int threshold=80;
      FastFeatureDetector detector(threshold);
-     detector.detect(img1, keypoints1);
-     detector.detect(img2, keypoints2);
+     detector.detect(img1, keypoints1, mask);
+     detector.detect(img2, keypoints2, mask);
      break;
      }
      case 2: //SURF
-     {SurfFeatureDetector detector(2000);
-     detector.detect(img1, keypoints1);
-     detector.detect(img2, keypoints2);
+     {
+     int threshold=80;	
+     SurfFeatureDetector detector(threshold);
+     detector.detect(img1, keypoints1, mask);
+     detector.detect(img2, keypoints2, mask);
      break;
      }
      case 3: //GFTT
-     {int maxCorners=150;
+     {int maxCorners=200;
       GoodFeaturesToTrackDetector detector(maxCorners);
-      detector.detect(img1, keypoints1);
-      detector.detect(img2, keypoints2);
+      detector.detect(img1, keypoints1, mask);
+      detector.detect(img2, keypoints2, mask);
       break;
      }
      case 4: //ORB
-     {int maxCorners=150;
+     {int maxCorners=200;
       OrbFeatureDetector detector(maxCorners);
-      detector.detect(img1, keypoints1);
-      detector.detect(img2, keypoints2);     
+      detector.detect(img1, keypoints1, mask);
+      detector.detect(img2, keypoints2, mask);     
       break;
      }
      case 5: //Harris  (change threshold, presently some default threshold)
      {
       Ptr<FeatureDetector> detector= FeatureDetector::create("HARRIS");
-      detector->detect(img1, keypoints1);
-      detector->detect(img2, keypoints2);      
+      detector->detect(img1, keypoints1, mask);
+      detector->detect(img2, keypoints2, mask);      
      } 
     }
 }
@@ -118,7 +120,7 @@ void MonoVisualOdometry::findGoodMatches() {
      case 1:
      {
      
-     double distance=50.; //quite adjustable/variable
+     double distance=30.; //quite adjustable/variable
      double confidence=0.99; //doesnt affect much when changed
      ransacTest(matches,keypoints1,keypoints2,good_matches,distance,confidence); 
      break;
@@ -164,6 +166,7 @@ void MonoVisualOdometry::findGoodMatches() {
 	  break;		
      }
     }
+    matches.clear();
     matches=good_matches; // update matches by good_matches    
     N=matches.size();  // no of matched feature points
 }
@@ -696,7 +699,7 @@ void MonoVisualOdometry::ransacTest(const std::vector<cv::DMatch> matches,const 
         y= keypoints2[it->trainIdx].pt.y;
         points2.push_back(cv::Point2f(x,y));
     }
-    
+
     // Compute F matrix using RANSAC
     std::vector<uchar> inliers(points1.size(),0);
     cv::Mat fundemental= cv::findFundamentalMat(cv::Mat(points1),cv::Mat(points2),inliers,FM_RANSAC,distance,confidence); // confidence probability

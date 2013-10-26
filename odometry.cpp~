@@ -140,14 +140,14 @@ if(!opticalFlow){
     switch(feature)
     {
      case 1: //FAST
-     {int threshold=130;
+     {int threshold=100;
      FastFeatureDetector detector(threshold);
      detector.detect(img1, keypoints1);
      detector.detect(img2, keypoints2);
      break;
      }
      case 2: //SURF
-     {SurfFeatureDetector detector(2000);
+     {SurfFeatureDetector detector(130);
      detector.detect(img1, keypoints1);
      detector.detect(img2, keypoints2);
      break;
@@ -397,7 +397,7 @@ switch (solver)
  for(size_t i = 0; i < N; i++){
  e =e+(Dx-Z*(A[i][0]*cos(phi)-A[i][1]*sin(phi)-B[i][0]))*(Dx-Z*(A[i][0]*cos(phi)-A[i][1]*sin(phi)-B[i][0]))+(Dy-Z*(A[i][0]*sin(phi)+A[i][1]*cos(phi)-B[i][1]))*(Dy-Z*(A[i][0]*sin(phi)+A[i][1]*cos(phi)-B[i][1]));
  }
-cout<<e<<"\t";
+//cout<<e<<"\t";
 }
 
 time=clock()-time;

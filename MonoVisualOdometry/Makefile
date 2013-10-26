@@ -5,9 +5,9 @@ LIBS=-lopencv_calib3d -lopencv_core -lopencv_features2d -lopencv_flann -lopencv_
 proj: test_MonoVisualOdometry.o mono_odometry.o
 	g++ -o proj test_MonoVisualOdometry.o mono_odometry.o $(LIBS) $(LDIR) -g
 mono_odometry.o: mono_odometry.h mono_odometry.cpp
-	g++ -c mono_odometry.cpp $(LIBS) $(LDIR)
+	g++ -c mono_odometry.cpp $(LIBS) $(LDIR) -g
 test_MonoVisualOdometry.o: mono_odometry.cpp test_MonoVisualOdometry.cpp
-	g++ -c test_MonoVisualOdometry.cpp $(LIBS) $(LDIR)
+	g++ -c test_MonoVisualOdometry.cpp $(LIBS) $(LDIR) -g
 clean:
 	rm -f *.o core proj
 	
