@@ -5,8 +5,14 @@ using namespace std;
 using namespace cv;
 
 #define min_N 10	// min no of feature check for result reliability
-#define min_phi 0.001   // radians
-#define max_phi 0.3     // radians
+#define max_N 200	// max no feature points to be detected
+#define threshold 100	// threshold value for some feature detectors
+#define min_phi 0.001   // (radians) for removing 0 error accumulation
+#define max_phi 0.3     // (radians) max capability of vo tracking per frame
+#define img_width 320	// image width to operate at
+#define img_height 240	// image height to operate at
+#define GD_gm 0.005	// gamma value for Gradient Descent
+#define reg_lm 0.005	// regularization term weight in error/cost func
 
 MonoVisualOdometry::MonoVisualOdometry (parameters param) {
       net_Dx=0;net_Dy=0;net_phi=0;net_Z1=0;net_Z2=0;Zsum=0; //pose initialisation
@@ -23,7 +29,7 @@ MonoVisualOdometry::MonoVisualOdometry (parameters param) {
       method=param.option.method;            
       solver=param.option.solver;
       mask=imread("mask_e.png",0);
-      cv::resize(mask,mask,Size(320,240));
+      cv::resize(mask,mask,Size(img_width,img_height));
 }
 
 MonoVisualOdometry::~MonoVisualOdometry () {
@@ -33,7 +39,7 @@ void MonoVisualOdometry::findKeypoints() {
     switch(feature)
     {
      case 1: //FAST
-     {int threshold=80;
+     {
      FastFeatureDetector detector(threshold);
      detector.detect(img1, keypoints1, mask);
      detector.detect(img2, keypoints2, mask);
@@ -41,21 +47,20 @@ void MonoVisualOdometry::findKeypoints() {
      }
      case 2: //SURF
      {
-     int threshold=80;	
      SurfFeatureDetector detector(threshold);
      detector.detect(img1, keypoints1, mask);
      detector.detect(img2, keypoints2, mask);
      break;
      }
      case 3: //GFTT
-     {int maxCorners=200;
+     {int maxCorners=max_N;
       GoodFeaturesToTrackDetector detector(maxCorners);
       detector.detect(img1, keypoints1, mask);
       detector.detect(img2, keypoints2, mask);
       break;
      }
      case 4: //ORB
-     {int maxCorners=200;
+     {int maxCorners=max_N;
       OrbFeatureDetector detector(maxCorners);
       detector.detect(img1, keypoints1, mask);
       detector.detect(img2, keypoints2, mask);     
@@ -173,7 +178,7 @@ void MonoVisualOdometry::findGoodMatches() {
 }
 
 void MonoVisualOdometry::calcOpticalFlow(){
-    int maxCorners=200;
+    int maxCorners=max_N;
     std::vector<cv::KeyPoint> _keypoints1;	// all keypoints detected
     GoodFeaturesToTrackDetector detector(maxCorners);
     detector.detect(img1, _keypoints1, mask);
@@ -351,7 +356,7 @@ void MonoVisualOdometry::rotationScaledTranslation() {
         tx_o=tx;ty_o=ty;phi_o=phi;
         switch (solver)
         {
-         case 1: gm=0.005; // Gradient-Descent
+         case 1: gm=GD_gm; // Gradient-Descent
          break;
          case 2: gm=1/e; // Newton-Raphson
          break;
@@ -393,7 +398,7 @@ void MonoVisualOdometry::rotationScaledTranslation_reg() {
     // grad(f(x))={df/dtx,df/dty,df/dphi}
     
     //initial guess
-    tx=0.001;ty=0.001;phi=0;lam=0.005;
+    tx=0.001;ty=0.001;phi=0;lam=reg_lm;
 
     float dDx,dDy,dphi,dphi_new; //gradients
     dphi=df_dphi(tx,ty,phi,1,A,B,N);    
@@ -416,7 +421,7 @@ void MonoVisualOdometry::rotationScaledTranslation_reg() {
         tx_o=tx;ty_o=ty;phi_o=phi;
         switch (solver)
         {
-         case 1: gm=0.005; // Gradient-Descent
+         case 1: gm=GD_gm; // Gradient-Descent
          break;
          case 2: gm=1/e; // Newton-Raphson
          break;
@@ -478,7 +483,7 @@ void MonoVisualOdometry::rotationActualTranslation() {
         Dx_o=Dx;Dy_o=Dy;phi_o=phi;Z_o=Z;
         switch (solver)
         {
-         case 1: gm=0.005; // Gradient-Descent
+         case 1: gm=GD_gm; // Gradient-Descent
          break;
          case 2: gm=1/e; // Newton-Raphson
          break;
@@ -562,8 +567,8 @@ void MonoVisualOdometry::run() {
     cvtColor(img2,img2,CV_BGR2GRAY);
     
     // resize to 320x240
-    cv::resize(img1,img1,Size(320,240));
-    cv::resize(img2,img2,Size(320,240));
+    cv::resize(img1,img1,Size(img_width,img_height));
+    cv::resize(img2,img2,Size(img_width,img_height));
     
   if(opticalFlow){
     //calculate matched feature points optical flow
@@ -582,7 +587,6 @@ void MonoVisualOdometry::run() {
     // find good_matches
     findGoodMatches();
   }
-   
    
     // calc normalised 3D coordinates
     calcNormCoordinates();
