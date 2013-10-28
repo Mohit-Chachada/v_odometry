@@ -11,13 +11,13 @@ int main(int argc, char** argv)
 {
     // class input parameters - feature options
     MonoVisualOdometry::parameters param;
-// not needed for optical flow method
+/* not needed for optical flow method
 
     param.option.feature=4;
     param.option.extract=2;
     param.option.match=1;
     param.option.outlier=1;
-
+*/
     param.option.method=3;
     param.option.solver=1;
          
@@ -48,7 +48,7 @@ int main(int argc, char** argv)
     MonoVisualOdometry odom(param);               
 //    odom.nframes=1; // keeps track of overall frames count
     odom.nframes=0; // shud be intitialised with =0; for testing =1;
-    odom.opticalFlow=false; 	//necessary for optical flow
+    odom.opticalFlow=true; 	//necessary for optical flow
     
     while(inputVideo.isOpened()){	//actual
 //    for(int i=0 ;i<1 ;i++ ){	// for(;;) testing
@@ -56,7 +56,6 @@ int main(int argc, char** argv)
         //cin>>frame;  
         inputVideo.read(frame);
         imshow("frame_new", frame);
-        if(waitKey(1) >= 0) break;
         odom.nframes++;
 
         if(odom.nframes>=2) {

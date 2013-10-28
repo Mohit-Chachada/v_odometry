@@ -179,7 +179,8 @@ protected:
     float lam; 		// regularization term weightage
     cv::Mat mask;    // mask image
     bool phi_status;	// flag to check if phi values are reliable or not
-//    vector<uchar> status; // flag to check whether optical flow matching is found
+    int lost_fcount;	// no of consecutives frames lost
+    bool lost_track;	// flag to check if vo lost track
 
 private:
   //  parameters  param;     // common parameters

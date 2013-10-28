@@ -16,7 +16,6 @@ class MonoVisualOdometry {
 public:
 
   // camera parameters (all are mandatory / need to be supplied)
- /*
   struct calibration {  
     float fx;  // f/dx (in pixels)
     float fy;  // f/dy (in pixels)    
@@ -28,9 +27,7 @@ public:
       fx=391.54809;
       fy=395.45221;
     }
-  };
-  
- */ 
+  }; 
   
   struct options {  
     int feature,extract,match,outlier,method,solver; // options for feature points usage and solving methods
@@ -49,7 +46,7 @@ public:
   // general parameters
   struct parameters {
     MonoVisualOdometry::options   option;           // options for feature usage
-    //MonoVisualOdometry::calibration calib;          // camera calibration parameters
+    MonoVisualOdometry::calibration calib;          // camera calibration parameters
   };
   
   struct pose {  

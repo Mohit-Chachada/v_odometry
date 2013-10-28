@@ -23,6 +23,7 @@ MonoVisualOdometry::MonoVisualOdometry (parameters param) {
       method=param.option.method;            
       solver=param.option.solver;
       mask=imread("mask_e.png",0);
+      cv::resize(mask,mask,Size(320,240));
 }
 
 MonoVisualOdometry::~MonoVisualOdometry () {
@@ -558,7 +559,11 @@ void MonoVisualOdometry::run() {
     
     // convert to grayscale
     cvtColor(img1,img1,CV_BGR2GRAY);
-    cvtColor(img2,img2,CV_BGR2GRAY);  
+    cvtColor(img2,img2,CV_BGR2GRAY);
+    
+    // resize to 320x240
+    cv::resize(img1,img1,Size(320,240));
+    cv::resize(img2,img2,Size(320,240));
     
   if(opticalFlow){
     //calculate matched feature points optical flow
@@ -577,6 +582,8 @@ void MonoVisualOdometry::run() {
     // find good_matches
     findGoodMatches();
   }
+   
+   
     // calc normalised 3D coordinates
     calcNormCoordinates();
   
@@ -596,17 +603,14 @@ void MonoVisualOdometry::run() {
     Mat img_key1;
     drawKeypoints(img1, keypoints1,img_key1,color,flags);
     imshow("keypoints1", img_key1);
-    waitKey(1);
     
     namedWindow("keypoints2", 1);
     Mat img_key2;
     drawKeypoints(img2, keypoints2,img_key2,color,flags);
     imshow("keypoints2", img_key2);
-    waitKey(1);    
     
     namedWindow("mask", 1);
     imshow("mask", mask);
-    waitKey(1);    
 
 /*
     // display the two frames
