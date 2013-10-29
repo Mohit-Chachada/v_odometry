@@ -2,6 +2,7 @@
 #define MONO_ODOMETRY_H
 
 #include <cmath>
+#include <iostream>
 #include <time.h>
 #include "opencv2/calib3d/calib3d.hpp"
 #include "opencv2/highgui/highgui.hpp"
@@ -9,7 +10,6 @@
 #include "opencv2/video/tracking.hpp"
 #include "opencv2/core/core.hpp"
 #include "opencv2/features2d/features2d.hpp"
-
 
 class MonoVisualOdometry {
 
@@ -31,6 +31,7 @@ public:
   
   struct options {  
     int feature,extract,match,outlier,method,solver; // options for feature points usage and solving methods
+    bool opticalFlow; // set(=1) for optical flow method    
     options () { 
     //Default option values
     feature=1;
@@ -39,6 +40,7 @@ public:
     outlier=1;
     method=1;
     solver=1;
+    opticalFlow=true;
     }
   };
   
@@ -54,7 +56,7 @@ public:
     float x_net,y_net,heading_net,Z_avg1,Z_avg2,run_time;  // net(absolute) Dx,Dy,phi wrt to start frame
     float x_rel,y_rel,heading_rel;	// relative Dx,Dy,phi wrt to previous frame
     float x_scaled,y_scaled,error;
-    bool head_status;
+    bool reliable;
     cv::Mat rot;
     pose () { 
     //Default option values
@@ -73,13 +75,11 @@ public:
     x_scaled=0;
     y_scaled=0;
     error=0;
-    head_status=true;
+    reliable=true;
     }
   };
   
-  cv::Mat img1,img2; //old(1) and new(2) frames obtained from camera
-  int nframes; // overall count of frames taken
-  bool opticalFlow; // set(=1) for optical flow method
+  int _nframes; // overall count of frames taken
   
   // constructor, takes as input a parameter structure:
   MonoVisualOdometry (parameters param);
@@ -87,6 +87,12 @@ public:
   // deconstructor
   ~MonoVisualOdometry ();
   
+  // set mask for feature detection
+  void setMask(cv::Mat);
+  
+  // get old and new image frames 
+  void getFrames(cv::Mat, cv::Mat);
+
   // find keypoints
   void findKeypoints();  
   
@@ -150,10 +156,10 @@ protected:
     void ransacTest(const std::vector<cv::DMatch> matches,const std::vector<cv::KeyPoint>&keypoints1,const std::vector<cv::KeyPoint>& keypoints2,std::vector<cv::DMatch>& goodMatches,double distance,double confidence);
 
 
-//(made public) int nframes; 	// overall count of frames taken
+//(made public) int _nframes; 	// overall count of frames taken
     float net_Dx,net_Dy,net_phi,net_Z1,net_Z2,Zsum,Rcos,Rsin; 	// net pose params at any instant (wrt start pose)
     float rel_Dx,rel_Dy,rel_phi;	// relative Dx,Dy,phi wrt to previous frame
-//(made public) cv::Mat img1,img2; 	//old(1) and new(2) frames obtained from camera
+    cv::Mat img1,img2; 	//old(1) and new(2) frames obtained from camera
     clock_t time; 	// variable to track time taken to run code
     float run_time;	//time for single run
     int N;	// no of good_matches obtained
@@ -178,8 +184,10 @@ protected:
     std::vector<int> fmatches;	// optical flow matches
     float lam; 		// regularization term weightage
     cv::Mat mask;    // mask image
-    bool phi_status;	// flag to check if phi values are reliable or not
-//    vector<uchar> status; // flag to check whether optical flow matching is found
+    bool opticalFlow;	// set(=1) for Optical Flow 
+    bool _reliable;	// flag to check if VO values are reliable or not
+    int lost_fcount;	// no of consecutives frames lost
+    bool lost_track;	// flag to check if vo lost track
 
 private:
   //  parameters  param;     // common parameters

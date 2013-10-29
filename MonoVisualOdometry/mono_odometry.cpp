@@ -1,18 +1,20 @@
 #include "mono_odometry.h"
-#include <iostream>
 
 using namespace std;
 using namespace cv;
 
-#define min_N 10	// min no of feature check for result reliability
-#define max_N 200	// max no feature points to be detected
-#define threshold 100	// threshold value for some feature detectors
-#define min_phi 0.001   // (radians) for removing 0 error accumulation
-#define max_phi 0.3     // (radians) max capability of vo tracking per frame
-#define img_width 320	// image width to operate at
-#define img_height 240	// image height to operate at
-#define GD_gm 0.005	// gamma value for Gradient Descent
-#define reg_lm 0.005	// regularization term weight in error/cost func
+#define min_N 10		// min no of feature check for result reliability
+#define max_N 200		// max no feature points to be detected
+#define threshold 100		// threshold value for some feature detectors
+#define min_phi 0.001   	// (radians) for removing 0 error accumulation
+#define max_phi 0.3     	// (radians) max capability of vo tracking per frame
+#define img_width 320		// image width to operate at
+#define img_height 240		// image height to operate at
+#define GD_gm 0.005		// gamma value for Gradient Descent
+#define reg_lm 0.005		// regularization term weight in error/cost func
+#define GD_min_err 0.0001	// min GD error threshold for convergence
+#define GD_max_iter 100		// max GD iterations threshold for convergence
+#define GD_min_gradsum 0.0001	// min grad_sum threshold for convergence
 
 MonoVisualOdometry::MonoVisualOdometry (parameters param) {
       net_Dx=0;net_Dy=0;net_phi=0;net_Z1=0;net_Z2=0;Zsum=0; //pose initialisation
@@ -28,11 +30,20 @@ MonoVisualOdometry::MonoVisualOdometry (parameters param) {
       outlier=param.option.outlier;
       method=param.option.method;            
       solver=param.option.solver;
-      mask=imread("mask_e.png",0);
-      cv::resize(mask,mask,Size(img_width,img_height));
+      opticalFlow=param.option.opticalFlow;
 }
 
 MonoVisualOdometry::~MonoVisualOdometry () {
+}
+
+void MonoVisualOdometry::setMask (Mat _mask) {
+	mask=_mask;
+        cv::resize(mask,mask,Size(img_width,img_height));	
+}
+
+void MonoVisualOdometry::getFrames (Mat _oldFrame, Mat _newFrame) {
+	img1=_oldFrame.clone();
+	img2=_newFrame.clone();
 }
 
 void MonoVisualOdometry::findKeypoints() { 
@@ -41,36 +52,67 @@ void MonoVisualOdometry::findKeypoints() {
      case 1: //FAST
      {
      FastFeatureDetector detector(threshold);
-     detector.detect(img1, keypoints1, mask);
-     detector.detect(img2, keypoints2, mask);
+       if (mask.empty()) {
+     	 detector.detect(img1, keypoints1);
+     	 detector.detect(img2, keypoints2);
+       }
+       else {
+     	 detector.detect(img1, keypoints1, mask);
+     	 detector.detect(img2, keypoints2, mask);
+       }
      break;
      }
      case 2: //SURF
      {
      SurfFeatureDetector detector(threshold);
-     detector.detect(img1, keypoints1, mask);
-     detector.detect(img2, keypoints2, mask);
+       if (mask.empty()) {
+     	 detector.detect(img1, keypoints1);
+     	 detector.detect(img2, keypoints2);
+       }
+       else {
+     	 detector.detect(img1, keypoints1, mask);
+     	 detector.detect(img2, keypoints2, mask);
+       }
      break;
      }
      case 3: //GFTT
      {int maxCorners=max_N;
       GoodFeaturesToTrackDetector detector(maxCorners);
-      detector.detect(img1, keypoints1, mask);
-      detector.detect(img2, keypoints2, mask);
+       if (mask.empty()) {
+     	 detector.detect(img1, keypoints1);
+     	 detector.detect(img2, keypoints2);
+       }
+       else {
+     	 detector.detect(img1, keypoints1, mask);
+     	 detector.detect(img2, keypoints2, mask);
+       }
       break;
      }
      case 4: //ORB
      {int maxCorners=max_N;
       OrbFeatureDetector detector(maxCorners);
-      detector.detect(img1, keypoints1, mask);
-      detector.detect(img2, keypoints2, mask);     
+       if (mask.empty()) {
+     	 detector.detect(img1, keypoints1);
+     	 detector.detect(img2, keypoints2);
+       }
+       else {
+     	 detector.detect(img1, keypoints1, mask);
+     	 detector.detect(img2, keypoints2, mask);
+       }    
       break;
      }
      case 5: //Harris  (change threshold, presently some default threshold)
      {
       Ptr<FeatureDetector> detector= FeatureDetector::create("HARRIS");
-      detector->detect(img1, keypoints1, mask);
-      detector->detect(img2, keypoints2, mask);      
+       if (mask.empty()) {
+     	 detector->detect(img1, keypoints1);
+     	 detector->detect(img2, keypoints2);
+       }
+       else {
+     	 detector->detect(img1, keypoints1, mask);
+     	 detector->detect(img2, keypoints2, mask);
+       }
+      break;    
      } 
     }
 }
@@ -181,7 +223,12 @@ void MonoVisualOdometry::calcOpticalFlow(){
     int maxCorners=max_N;
     std::vector<cv::KeyPoint> _keypoints1;	// all keypoints detected
     GoodFeaturesToTrackDetector detector(maxCorners);
-    detector.detect(img1, _keypoints1, mask);
+    if (mask.empty()) {
+    	detector.detect(img1, _keypoints1);
+    }
+    else {
+    	detector.detect(img1, _keypoints1, mask);
+    }
     
     // convert KeyPoint to Point2f
     for (int i=0;i<_keypoints1.size(); i++)
@@ -325,8 +372,8 @@ void MonoVisualOdometry::estimateTransformMatrix() {
      	if (phi>0) phi=max_phi; 	
      	else phi=-max_phi; 	
      }
-     if (abs(phi)>=max_phi || N<=min_N) phi_status=false; 	// min 10 features change phi_status flag
-     else phi_status=true;      
+     if (abs(phi)>=max_phi || N<=min_N) _reliable=false; 	// min 10 features change _reliable flag
+     else _reliable=true;      
 }
 
 void MonoVisualOdometry::rotationScaledTranslation() {
@@ -349,7 +396,7 @@ void MonoVisualOdometry::rotationScaledTranslation() {
     float e_old=0;
     float grad_sum=10;	// sum of squares of gradients
     
-    while((e>=0.0001)&&(count<100)&&(grad_sum>=0.0001)){
+    while((e>=GD_min_err)&&(count<GD_max_iter)&&(grad_sum>=GD_min_gradsum)){
 	count++;
 	e_old=e;
         //Old x_vect={tx,ty,phi}
@@ -386,8 +433,8 @@ void MonoVisualOdometry::rotationScaledTranslation() {
     	if (phi>0) phi=max_phi; 	
     	else phi=-max_phi; 	
     }
-    if (abs(phi)>=max_phi || N<=min_N) phi_status=false; 	// min 10 features change phi_status flag
-    else phi_status=true;
+    if (abs(phi)>=max_phi || N<=min_N) _reliable=false; 	// min 10 features change _reliable flag
+    else _reliable=true;
         
 }
 
@@ -414,7 +461,7 @@ void MonoVisualOdometry::rotationScaledTranslation_reg() {
     float e_old=0;
     float grad_sum=10;	// sum of squares of gradients
     
-    while((e>=0.0001)&&(count<100)&&(grad_sum>=0.0001)){
+    while((e>=GD_min_err)&&(count<GD_max_iter)&&(grad_sum>=GD_min_gradsum)){
 	count++;
 	e_old=e;
         //Old x_vect={tx,ty,phi}
@@ -454,8 +501,8 @@ void MonoVisualOdometry::rotationScaledTranslation_reg() {
     	if (phi>0) phi=max_phi; 	
     	else phi=-max_phi; 	
     }
-    if (abs(phi)>=max_phi || N<=min_N) phi_status=false; 	// min 10 features change phi_status flag
-    else phi_status=true;
+    if (abs(phi)>=max_phi || N<=min_N) _reliable=false; 	// min 10 features change _reliable flag
+    else _reliable=true;
 }
 
 void MonoVisualOdometry::rotationActualTranslation() {
@@ -477,7 +524,7 @@ void MonoVisualOdometry::rotationActualTranslation() {
     count=0; 	//no of iterations for error to converge
     float grad_sum=10;	// sum of squares of gradients    
     
-    while((e>=0.0001)&&(count<100)&&(grad_sum>=0.0001)){
+    while((e>=GD_min_err)&&(count<GD_max_iter)&&(grad_sum>=GD_min_gradsum)){
 	count++;
         //Old x_vect={Dx,Dy,phi,Z}
         Dx_o=Dx;Dy_o=Dy;phi_o=phi;Z_o=Z;
@@ -515,8 +562,8 @@ void MonoVisualOdometry::rotationActualTranslation() {
     	if (phi>0) phi=max_phi; 	
     	else phi=-max_phi; 	
     }
-    if (abs(phi)>=max_phi || N<=min_N) phi_status=false; 	// min 10 features change phi_status flag
-    else phi_status=true;  
+    if (abs(phi)>=max_phi || N<=min_N) _reliable=false; 	// min 10 features change _reliable flag
+    else _reliable=true;  
 }
 
 
@@ -544,8 +591,8 @@ void MonoVisualOdometry::updateMotion(){
     net_Dy=net_Dy+Rcos*sin(net_phi)+Rsin*cos(net_phi); //net(absolute) camera translation in y-direction wrt to starting pose	
     net_phi=net_phi+phi; 			       //net(absolute) heading angle (anti-clk +ve)
     Zsum=Zsum+Z;					   
-    net_Z1=Zsum/(nframes-1);			       //average estimated_1 value of depth of ground from camera
-    if(nframes==2) net_Z2=Z;
+    net_Z1=Zsum/(_nframes-1);			       //average estimated_1 value of depth of ground from camera
+    if(_nframes==2) net_Z2=Z;
     else net_Z2=(net_Z2+Z)/2;			       //average estimated_2 value of depth of ground from camera
 } 
 
@@ -613,9 +660,10 @@ void MonoVisualOdometry::run() {
     drawKeypoints(img2, keypoints2,img_key2,color,flags);
     imshow("keypoints2", img_key2);
     
-    namedWindow("mask", 1);
-    imshow("mask", mask);
-
+    if (!mask.empty()) {
+    	namedWindow("mask", 1);
+    	imshow("mask", mask);
+    }
 /*
     // display the two frames
     imshow("Old frame", img1);
@@ -642,7 +690,7 @@ void MonoVisualOdometry::output(pose& position) {
     position.x_scaled=tx;
     position.y_scaled=ty;
     position.error=e;
-    position.head_status=phi_status;
+    position.reliable=_reliable;
 }
 
 float MonoVisualOdometry::df_dDx(float Dx,float Dy, float phi, float Z, float **A, float **B, int N) {
