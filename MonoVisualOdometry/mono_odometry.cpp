@@ -33,6 +33,9 @@ MonoVisualOdometry::MonoVisualOdometry (parameters param) {
       opticalFlow=param.option.opticalFlow;
 }
 
+MonoVisualOdometry::MonoVisualOdometry () {
+}
+
 MonoVisualOdometry::~MonoVisualOdometry () {
 }
 

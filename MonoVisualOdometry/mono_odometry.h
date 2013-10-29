@@ -84,6 +84,9 @@ public:
   // constructor, takes as input a parameter structure:
   MonoVisualOdometry (parameters param);
   
+  // empty constructor
+  MonoVisualOdometry();
+  
   // deconstructor
   ~MonoVisualOdometry ();
   

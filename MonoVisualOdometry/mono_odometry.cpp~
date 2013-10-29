@@ -396,7 +396,7 @@ void MonoVisualOdometry::rotationScaledTranslation() {
     float e_old=0;
     float grad_sum=10;	// sum of squares of gradients
     
-    while((e>=GD_min_err)&&(count<GD_max_iter)&&(grad_sum>=GD_max_gradsum)){
+    while((e>=GD_min_err)&&(count<GD_max_iter)&&(grad_sum>=GD_min_gradsum)){
 	count++;
 	e_old=e;
         //Old x_vect={tx,ty,phi}
@@ -461,7 +461,7 @@ void MonoVisualOdometry::rotationScaledTranslation_reg() {
     float e_old=0;
     float grad_sum=10;	// sum of squares of gradients
     
-    while((e>=GD_min_err)&&(count<GD_max_iter)&&(grad_sum>=GD_max_gradsum)){
+    while((e>=GD_min_err)&&(count<GD_max_iter)&&(grad_sum>=GD_min_gradsum)){
 	count++;
 	e_old=e;
         //Old x_vect={tx,ty,phi}
@@ -524,7 +524,7 @@ void MonoVisualOdometry::rotationActualTranslation() {
     count=0; 	//no of iterations for error to converge
     float grad_sum=10;	// sum of squares of gradients    
     
-    while((e>=GD_min_err)&&(count<GD_max_iter)&&(grad_sum>=GD_max_gradsum)){
+    while((e>=GD_min_err)&&(count<GD_max_iter)&&(grad_sum>=GD_min_gradsum)){
 	count++;
         //Old x_vect={Dx,Dy,phi,Z}
         Dx_o=Dx;Dy_o=Dy;phi_o=phi;Z_o=Z;
